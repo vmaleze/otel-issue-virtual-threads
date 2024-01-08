@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.2.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: demo
+    ports:
+      - "3306:3306"
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.91.0
+    restart: always
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"
+
+  with-vm-options:
+    image: demo-with-vm-option
+    build:
+      context: .
+    restart: always
+    environment:
+      JAVA_OPTS: "-Djdk.tracePinnedThreads=short"
+      DB_URL: "db"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "8081:8080"
+
+  without-vm-options:
+    image: demo-without-vm-option
+    build: .
+    restart: always
+    environment:
+      DB_URL: "db"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "8080:8080"
